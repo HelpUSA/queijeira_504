@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queijeira 504 - Os Melhores Queijos Artesanais do Brasil</title>
+  <meta name="description" content="A Queijeira 504 é uma das maiores referências em queijos artesanais de qualidade no Brasil. Loja em Tambaú, João Pessoa - PB. Queijo de Coalho e Manteiga premiados!">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="assets/images/logo_1.png" type="image/png">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="assets/css/style.css">
+  
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <!-- Tailwind Custom Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#ec920e',
+              dark: '#d67e00',
+              light: '#fff8ee',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="app" class="pb-24">
+    
+    <!-- Top Header Cover Banner -->
+    <div class="cover-banner w-full bg-slate-800 relative"
+         :style="{ backgroundImage: profile.local_image ? `url(${profile.local_image})` : 'url(https://storage.googleapis.com/prod-cardapio-web/uploads/company/image/26126/57adfbc6capa.jpg)' }">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto px-4 -mt-16 relative z-10">
+      
+      <!-- Store Info Card -->
+      <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-md border border-slate-100 mb-6">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+          
+          <!-- Logo -->
+          <img :src="profile.local_logo || 'assets/images/logo_1.png'" 
+               :alt="profile.name || 'Queijeira 504'" 
+               class="store-logo -mt-12 sm:-mt-14 shadow-lg flex-shrink-0"
+               onerror="this.src='https://storage.googleapis.com/prod-cardapio-web/uploads/company/logo/26126/1d9f34faades.png'">
+          
+          <!-- Details -->
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+              <h1 class="text-2xl font-bold text-slate-800">{{ profile.name || 'Queijeira 504' }}</h1>
+              <span :class="isStoreOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" 
+                    class="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider">
+                {{ isStoreOpen ? 'Aberto Agora' : 'Fechado' }}
+              </span>
+            </div>
+            
+            <p class="text-sm text-slate-600 mb-3 max-w-2xl line-clamp-2">
+              {{ profile.description || 'Referências em queijos artesanais de qualidade no Brasil. Queijos de Coalho e Manteiga premiados!' }}
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs sm:text-sm text-slate-600">
+              <div class="flex items-center gap-1.5 font-medium text-amber-600">
+                <i class="fa-solid fa-star"></i>
+                <span>4.9 (240+ avaliações)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fa-regular fa-clock"></i>
+                <span>45 - 60 min</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-motorcycle"></i>
+                <span>Entrega em João Pessoa</span>
+              </div>
+              <button @click="showInfoModal = true" class="text-brand font-semibold hover:underline flex items-center gap-1">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Ver Informações</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="relative mb-6">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" 
+               v-model="searchQuery" 
+               placeholder="Buscar queijo, vinho, geleia ou item..." 
+               class="w-full pl-11 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition-all text-sm text-slate-700">
+        <button v-if="searchQuery" 
+                @click="searchQuery = ''" 
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+    </div> <!-- End Main Header Container -->
+
+    <!-- Sticky Category Tabs Navigation -->
+    <div class="sticky-cat-nav border-b border-slate-200 mb-6">
+      <div class="max-w-4xl mx-auto px-4 flex items-center overflow-x-auto no-scrollbar space-x-1 py-1">
+        <button v-for="cat in categories" 
+                :key="cat.id" 
+                @click="scrollToCategory(cat.id)"
+                :class="{ 'active': activeCatId === cat.id }"
+                class="cat-tab-item flex-shrink-0">
+          {{ cat.name }}
+          <span class="ml-1 text-xs opacity-75 font-normal">({{ cat.items ? cat.items.length : 0 }})</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Catalog Sections & Products -->
+    <div class="max-w-4xl mx-auto px-4 space-y-10">
+      
+      <div v-if="filteredCategories.length === 0" class="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
+        <i class="fa-solid fa-cheese text-4xl text-slate-300 mb-3"></i>
+        <h3 class="text-lg font-medium text-slate-700">Nenhum produto encontrado</h3>
+        <p class="text-sm text-slate-500 mt-1">Tente buscar por outro nome de produto.</p>
+        <button @click="searchQuery = ''" class="mt-4 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors">
+          Ver todos os produtos
+        </button>
+      </div>
+
+      <div v-for="cat in filteredCategories" 
+           :key="cat.id" 
+           :id="'cat-' + cat.id" 
+           class="scroll-mt-20">
+        
+        <!-- Category Header -->
+        <div class="mb-4">
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span>{{ cat.name }}</span>
+            <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
+              {{ cat.items.length }}
+            </span>
+          </h2>
+          <p v-if="cat.description" class="text-xs text-slate-500 mt-1">{{ cat.description }}</p>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <div v-for="item in cat.items" 
+               :key="item.id" 
+               @click="openItemModal(item)"
+               class="product-card p-4 flex gap-4 cursor-pointer">
+            
+            <!-- Left Info -->
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <!-- Badges -->
+                <div v-if="item.badge" class="mb-1.5">
+                  <span class="badge-tag badge-highlight">
+                    <i class="fa-solid fa-certificate text-[10px] mr-1"></i> {{ item.badge }}
+                  </span>
+                </div>
+                
+                <h3 class="font-semibold text-slate-800 text-base leading-snug mb-1 hover:text-brand transition-colors">
+                  {{ item.name }}
+                </h3>
+                
+                <p v-if="item.description" class="text-xs text-slate-500 line-clamp-2 mb-2">
+                  {{ item.description }}
+                </p>
+              </div>
+
+              <!-- Price & Action -->
+              <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-base font-bold text-slate-900">
+                    {{ formatMoney(item.promotional_price ?? item.price ?? item.minimum_price) }}
+                  </span>
+                  <span v-if="item.promotional_price && item.price" class="text-xs text-slate-400 line-through">
+                    {{ formatMoney(item.price) }}
+                  </span>
+                </div>
+                
+                <button class="px-3 py-1.5 bg-brand/10 text-brand hover:bg-brand hover:text-white rounded-lg text-xs font-semibold transition-all flex items-center gap-1">
+                  <span>Adicionar</span>
+                  <i class="fa-solid fa-plus text-[10px]"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Thumbnail Image -->
+            <div class="flex-shrink-0 relative">
+              <img :src="item.local_image || item.image_url || 'assets/images/logo_1.png'" 
+                   :alt="item.name" 
+                   class="product-img"
+                   onerror="this.src='assets/images/logo_1.png'">
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div> <!-- End Catalog Sections -->
+
+    <!-- Floating Cart Bar -->
+    <div v-if="cartCount > 0" 
+         @click="showCartModal = true" 
+         class="floating-cart-bar">
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <i class="fa-solid fa-basket-shopping text-xl"></i>
+          <span class="absolute -top-2 -right-2 bg-white text-brand text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+            {{ cartCount }}
+          </span>
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider font-semibold opacity-90 block">Sua Sacola</span>
+          <span class="text-sm font-bold">{{ formatMoney(cartTotal) }}</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 font-semibold text-sm">
+        <span>Ver sacola</span>
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+      </div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div v-if="showItemModal && selectedItem" class="modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="modal-content w-full sm:max-w-xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        
+        <!-- Header -->
+        <div class="relative bg-slate-900 flex-shrink-0">
+          <img :src="selectedItem.local_image || selectedItem.image_url || 'assets/images/logo_1.png'" 
+               :alt="selectedItem.name" 
+               class="w-full h-48 sm:h-64 object-cover opacity-90"
+               onerror="this.src='assets/images/logo_1.png'">
+          <button @click="showItemModal = false" 
+                  class="absolute top-4 right-4 bg-black/60 text-white hover:bg-black w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Content Body -->
+        <div class="p-5 overflow-y-auto flex-1 space-y-5">
+          <div>
+            <span v-if="selectedItem.badge" class="badge-tag badge-highlight mb-1 inline-block">
+              {{ selectedItem.badge }}
+            </span>
+            <h2 class="text-xl font-bold text-slate-800">{{ selectedItem.name }}</h2>
+            <p v-if="selectedItem.description" class="text-sm text-slate-600 mt-1.5 leading-relaxed">
+              {{ selectedItem.description }}
+            </p>
+            <div class="text-lg font-bold text-brand mt-2">
+              {{ formatMoney(selectedItem.promotional_price ?? selectedItem.price ?? selectedItem.minimum_price) }}
+            </div>
+          </div>
+
+          <!-- Add-ons / Complements Groups -->
+          <div v-if="selectedItem.add_ons && selectedItem.add_ons.length > 0" class="space-y-6 pt-3 border-t border-slate-100">
+            
+            <div v-for="addon in selectedItem.add_ons" :key="addon.id" class="space-y-3">
+              <div class="bg-slate-50 p-3 rounded-lg flex items-center justify-between border border-slate-100">
+                <div>
+                  <h4 class="font-semibold text-slate-800 text-sm">{{ addon.name }}</h4>
+                  <span class="text-xs text-slate-500">
+                    {{ addon.minimum_quantity > 0 ? `Escolha de ${addon.minimum_quantity} a ${addon.maximum_quantity}` : `Até ${addon.maximum_quantity} opções` }}
+                  </span>
+                </div>
+                <span v-if="addon.minimum_quantity > 0" class="text-[11px] uppercase tracking-wider font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                  Obrigatório
+                </span>
+              </div>
+
+              <!-- Subitems list -->
+              <div class="space-y-2 pl-1">
+                <label v-for="sub in addon.subitems" 
+                       :key="sub.id" 
+                       @click.prevent="toggleSubitem(addon, sub)"
+                       class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-brand/50 hover:bg-amber-50/30 cursor-pointer transition-all">
+                  
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox" 
+                           :checked="isSubitemSelected(addon.id, sub.id)" 
+                           class="w-5 h-5 text-brand rounded border-slate-300 focus:ring-brand">
+                    <span class="text-sm font-medium text-slate-700">{{ sub.name }}</span>
+                  </div>
+
+                  <span v-if="sub.price > 0" class="text-sm font-semibold text-slate-600">
+                    +{{ formatMoney(sub.price) }}
+                  </span>
+                </label>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Special Observation Text Input -->
+          <div class="pt-3 border-t border-slate-100">
+            <label class="block text-sm font-semibold text-slate-800 mb-1">Observações do Item</label>
+            <textarea v-model="itemObservation" 
+                      placeholder="Ex: fatiar em pedaços finos, embalar para presente..." 
+                      rows="2" 
+                      class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"></textarea>
+          </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-4 flex-shrink-0">
+          
+          <!-- Quantity Adjuster -->
+          <div class="flex items-center border border-slate-300 rounded-xl bg-white shadow-sm overflow-hidden">
+            <button @click="itemQuantity = Math.max(1, itemQuantity - 1)" 
+                    class="w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold transition-colors">
+              <i class="fa-solid fa-minus text-xs"></i>
+            </button>
+            <span class="w-8 text-center font-bold text-slate-800 text-sm">{{ itemQuantity }}</span>
+            <button @click="itemQuantity++" 
+                    class="w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold transition-colors">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+          </div>
+
+          <!-- Add Button -->
+          <button @click="addToCart" 
+                  class="flex-1 py-3 px-6 bg-brand hover:bg-brand-dark text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-between text-sm sm:text-base">
+            <span>Adicionar</span>
+            <span>{{ formatMoney(modalTotalPrice) }}</span>
+          </button>
+
+        </div>
+
+      </div>
+    </div> <!-- End Product Modal -->
+
+    <!-- Shopping Cart Slide-over Modal -->
+    <div v-if="showCartModal" class="modal-backdrop flex justify-end">
+      <div class="modal-content w-full sm:max-w-md h-full bg-white flex flex-col shadow-2xl">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-basket-shopping text-brand text-lg"></i>
+            <h2 class="font-bold text-lg text-slate-800">Sua Sacola</h2>
+          </div>
+          <button @click="showCartModal = false" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Order Type Tabs (Entrega / Retirada) -->
+        <div class="p-4 border-b border-slate-100 bg-white">
+          <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+            <button @click="orderType = 'delivery'" 
+                    :class="orderType === 'delivery' ? 'bg-white text-brand shadow font-bold' : 'text-slate-600 font-medium'"
+                    class="py-2 rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-motorcycle"></i>
+              <span>Entrega</span>
+            </button>
+
+            <button @click="orderType = 'takeout'" 
+                    :class="orderType === 'takeout' ? 'bg-white text-brand shadow font-bold' : 'text-slate-600 font-medium'"
+                    class="py-2 rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-store"></i>
+              <span>Retirada</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cart Items List -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+          <div v-if="cart.length === 0" class="text-center py-16 text-slate-400">
+            <i class="fa-solid fa-basket-shopping text-5xl mb-3 opacity-40"></i>
+            <p class="text-slate-600 font-medium">Sua sacola está vazia</p>
+            <button @click="showCartModal = false" class="mt-4 px-4 py-2 bg-brand/10 text-brand font-semibold text-xs rounded-lg">
+              Escolher produtos
+            </button>
+          </div>
+
+          <div v-for="(cItem, idx) in cart" :key="cItem.id" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h4 class="font-semibold text-slate-800 text-sm leading-snug">{{ cItem.item.name }}</h4>
+                <p v-if="cItem.optionsText" class="text-xs text-slate-500 mt-0.5">{{ cItem.optionsText }}</p>
+                <p v-if="cItem.observation" class="text-xs text-amber-700 italic mt-0.5">"{{ cItem.observation }}"</p>
+              </div>
+
+              <button @click="updateCartQuantity(idx, -cItem.quantity)" class="text-slate-400 hover:text-rose-600 p-1">
+                <i class="fa-regular fa-trash-can text-sm"></i>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+              <div class="flex items-center border border-slate-300 rounded-lg bg-white overflow-hidden">
+                <button @click="updateCartQuantity(idx, -1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold">
+                  <i class="fa-solid fa-minus text-[10px]"></i>
+                </button>
+                <span class="w-6 text-center font-bold text-xs text-slate-800">{{ cItem.quantity }}</span>
+                <button @click="updateCartQuantity(idx, 1)" class="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold">
+                  <i class="fa-solid fa-plus text-[10px]"></i>
+                </button>
+              </div>
+
+              <span class="font-bold text-slate-900 text-sm">{{ formatMoney(cItem.totalPrice) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Subtotal & Checkout Button -->
+        <div v-if="cart.length > 0" class="p-4 border-t border-slate-200 bg-slate-50 space-y-3 flex-shrink-0">
+          <div class="space-y-1.5 text-xs sm:text-sm text-slate-600">
+            <div class="flex justify-between">
+              <span>Subtotal</span>
+              <span class="font-medium text-slate-800">{{ formatMoney(cartSubtotal) }}</span>
+            </div>
+
+            <div v-if="orderType === 'delivery'" class="flex justify-between">
+              <span>Taxa de entrega (estimada)</span>
+              <span class="font-medium text-slate-800">{{ formatMoney(deliveryFee) }}</span>
+            </div>
+
+            <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
+              <span>Total</span>
+              <span class="text-brand">{{ formatMoney(cartTotal) }}</span>
+            </div>
+          </div>
+
+          <button @click="showCheckoutModal = true" 
+                  class="w-full py-3.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+            <span>Finalizar Pedido</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+
+      </div>
+    </div> <!-- End Cart Modal -->
+
+    <!-- Checkout Modal -->
+    <div v-if="showCheckoutModal" class="modal-backdrop flex items-center justify-center p-4">
+      <div class="modal-content w-full max-w-lg max-h-[90vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-clipboard-check text-brand"></i>
+            <span>Dados de Entrega & Pagamento</span>
+          </h2>
+          <button @click="showCheckoutModal = false" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <div class="p-5 overflow-y-auto space-y-4">
+          
+          <!-- Contact Info -->
+          <div>
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Informações de Contato</h4>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Seu Nome completo *</label>
+                <input type="text" v-model="customer.name" placeholder="Ex: João da Silva" 
+                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Seu WhatsApp / Telefone *</label>
+                <input type="text" v-model="customer.phone" placeholder="(83) 99999-9999" 
+                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+              </div>
+            </div>
+          </div>
+
+          <!-- Delivery Address (if Delivery selected) -->
+          <div v-if="orderType === 'delivery'" class="pt-2 border-t border-slate-100">
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Endereço de Entrega</h4>
+            
+            <div class="space-y-3">
+              <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Rua / Avenida *</label>
+                  <input type="text" v-model="customer.street" placeholder="Ex: Av. Nego" 
+                         class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Número *</label>
+                  <input type="text" v-model="customer.number" placeholder="581" 
+                         class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Bairro *</label>
+                <input type="text" v-model="customer.neighborhood" placeholder="Ex: Tambaú" 
+                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Complemento</label>
+                  <input type="text" v-model="customer.complement" placeholder="Apto 101" 
+                         class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Ponto de Ref.</label>
+                  <input type="text" v-model="customer.reference" placeholder="Próximo ao farol" 
+                         class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/40 focus:border-brand">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="pt-2 border-t border-slate-100">
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Forma de Pagamento</h4>
+            
+            <div class="space-y-2">
+              <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-3">
+                  <input type="radio" v-model="customer.paymentMethod" value="pix" class="custom-radio w-4 h-4">
+                  <span class="text-sm font-medium text-slate-700">PIX (Chave Instantânea)</span>
+                </div>
+                <i class="fa-brands fa-pix text-teal-600 text-lg"></i>
+              </label>
+
+              <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-3">
+                  <input type="radio" v-model="customer.paymentMethod" value="money" class="custom-radio w-4 h-4">
+                  <span class="text-sm font-medium text-slate-700">Dinheiro (na entrega)</span>
+                </div>
+                <i class="fa-solid fa-money-bill-wave text-emerald-600 text-lg"></i>
+              </label>
+
+              <div v-if="customer.paymentMethod === 'money'" class="pl-7">
+                <input type="text" v-model="customer.changeAmount" placeholder="Precisa de troco para quanto? (Ex: R$ 100,00)" 
+                       class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-brand/40">
+              </div>
+
+              <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-3">
+                  <input type="radio" v-model="customer.paymentMethod" value="card" class="custom-radio w-4 h-4">
+                  <span class="text-sm font-medium text-slate-700">Cartão de Crédito / Débito (na entrega)</span>
+                </div>
+                <i class="fa-regular fa-credit-card text-blue-600 text-lg"></i>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Submit Button -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0">
+          <button @click="sendWhatsAppOrder" 
+                  class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-base">
+            <i class="fa-brands fa-whatsapp text-xl"></i>
+            <span>Enviar Pedido pelo WhatsApp</span>
+          </button>
+        </div>
+
+      </div>
+    </div> <!-- End Checkout Modal -->
+
+    <!-- Store Info Modal -->
+    <div v-if="showInfoModal" class="modal-backdrop flex items-center justify-center p-4">
+      <div class="modal-content w-full max-w-lg max-h-[90vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-store text-brand"></i>
+            <span>Informações da Loja</span>
+          </h2>
+          <button @click="showInfoModal = false" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-5 overflow-y-auto space-y-6 text-slate-700">
+          
+          <!-- Address -->
+          <div>
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Endereço & Localização</h4>
+            <div class="flex items-start gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              <i class="fa-solid fa-location-dot text-brand text-lg mt-0.5"></i>
+              <div>
+                <p class="font-semibold text-sm text-slate-800">Av. Nego, 581 - Tambaú</p>
+                <p class="text-xs text-slate-500">João Pessoa - PB, CEP 58039-100</p>
+                <a href="https://maps.google.com/?q=Av.+Nego,+581+-+Tambaú,+João+Pessoa+-+PB" 
+                   target="_blank" 
+                   class="inline-flex items-center gap-1 text-xs text-brand font-semibold mt-2 hover:underline">
+                  <span>Abrir no Google Maps</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact & Social -->
+          <div>
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Contato & Redes</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <a href="https://wa.me/5583993064658" target="_blank" 
+                 class="flex items-center gap-2.5 p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100 font-medium text-xs hover:bg-emerald-100 transition-colors">
+                <i class="fa-brands fa-whatsapp text-lg text-emerald-600"></i>
+                <span>(83) 99306-4658</span>
+              </a>
+
+              <a href="https://instagram.com/queijeira504" target="_blank" 
+                 class="flex items-center gap-2.5 p-3 bg-pink-50 text-pink-800 rounded-xl border border-pink-100 font-medium text-xs hover:bg-pink-100 transition-colors">
+                <i class="fa-brands fa-instagram text-lg text-pink-600"></i>
+                <span>@queijeira504</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Business Hours -->
+          <div>
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Horários de Funcionamento</h4>
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2 text-xs">
+              <div class="flex justify-between py-1 border-b border-slate-200/60">
+                <span class="font-medium text-slate-700">Segunda a Sexta</span>
+                <span class="font-semibold text-emerald-700">10:00 às 18:00</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-200/60">
+                <span class="font-medium text-slate-700">Sábado</span>
+                <span class="font-semibold text-emerald-700">10:00 às 15:00</span>
+              </div>
+              <div class="flex justify-between py-1 text-slate-400">
+                <span>Domingo</span>
+                <span>Fechado</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Methods -->
+          <div>
+            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Formas de Pagamento Aceitas</h4>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium flex items-center gap-1.5">
+                <i class="fa-brands fa-pix text-teal-600"></i> Pix
+              </span>
+              <span class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium flex items-center gap-1.5">
+                <i class="fa-solid fa-money-bill-wave text-emerald-600"></i> Dinheiro
+              </span>
+              <span class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium flex items-center gap-1.5">
+                <i class="fa-regular fa-credit-card text-blue-600"></i> Cartão de Crédito
+              </span>
+              <span class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium flex items-center gap-1.5">
+                <i class="fa-solid fa-credit-card text-purple-600"></i> Cartão de Débito
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div> <!-- End Store Info Modal -->
+
+    <!-- Toast Notification Pill -->
+    <div v-if="showToast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-bounce">
+      <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+      <span>{{ toastMessage }}</span>
+    </div>
+
+  </div> <!-- End App -->
+
+  <!-- App Script -->
+  <script src="data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
