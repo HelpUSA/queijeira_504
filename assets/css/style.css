@@ -45,7 +45,7 @@ body {
   background: #94a3b8;
 }
 
-/* Sticky Header Tabs Scrollbar Hide */
+/* Hide Scrollbar helper */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -93,7 +93,7 @@ body {
   white-space: nowrap;
   padding: 10px 16px;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--text-muted);
   border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
@@ -147,8 +147,8 @@ body {
 }
 
 .product-img {
-  width: 100px;
-  height: 100px;
+  width: 95px;
+  height: 95px;
   border-radius: 8px;
   object-fit: cover;
   background-color: #f8fafc;
@@ -156,8 +156,8 @@ body {
 
 @media (min-width: 640px) {
   .product-img {
-    width: 110px;
-    height: 110px;
+    width: 105px;
+    height: 105px;
   }
 }
 
@@ -191,12 +191,12 @@ body {
 /* Floating Cart Bar */
 .floating-cart-bar {
   position: fixed;
-  bottom: 16px;
+  bottom: 70px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 640px;
-  z-index: 40;
+  z-index: 35;
   background-color: var(--primary);
   color: #ffffff;
   border-radius: 12px;
@@ -214,10 +214,45 @@ body {
   transform: translateX(-50%) scale(1.01);
 }
 
-/* Radio & Checkbox Custom Styling */
-.custom-radio:checked {
-  background-color: var(--primary);
-  border-color: var(--primary);
+/* Fixed Bottom Navigation Bar (CardapioWeb Style) */
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.bottom-nav-item i {
+  font-size: 1.15rem;
+  margin-bottom: 3px;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 /* Line Clamp helper */

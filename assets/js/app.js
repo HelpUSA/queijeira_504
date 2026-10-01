@@ -7,9 +7,11 @@ createApp({
     const profile = computed(() => storeData.value.profile || {});
     const categories = computed(() => storeData.value.categories || []);
 
-    // Navigation & Search State
+    // Navigation & Tab State
+    const activeTab = ref('home'); // 'home' | 'search' | 'cart' | 'info'
     const activeCatId = ref(null);
     const searchQuery = ref('');
+    const showCategoryDrawer = ref(false);
     
     // Modals Visibility
     const showItemModal = ref(false);
@@ -42,7 +44,7 @@ createApp({
       changeAmount: ''
     });
 
-    // Load saved cart and customer from localStorage if available
+    // Load saved cart and customer details
     onMounted(() => {
       try {
         const savedCart = localStorage.getItem('q504_cart');
@@ -57,16 +59,22 @@ createApp({
       if (categories.value.length > 0) {
         activeCatId.value = categories.value[0].id;
       }
+
+      // Check hash in URL
+      if (window.location.hash) {
+        const catId = window.location.hash.replace('#cat-', '');
+        if (catId) activeCatId.value = catId;
+      }
     });
 
-    // Auto save cart to localStorage
+    // Save cart state
     watch(cart, (newCart) => {
       try {
         localStorage.setItem('q504_cart', JSON.stringify(newCart));
       } catch (e) {}
     }, { deep: true });
 
-    // Auto save customer details
+    // Save customer state
     watch(customer, (newCust) => {
       try {
         localStorage.setItem('q504_customer', JSON.stringify(newCust));
@@ -107,6 +115,34 @@ createApp({
       return false;
     });
 
+    // Highlighted / Featured Products ("Destaques")
+    const highlightedItems = computed(() => {
+      const highlights = [];
+      categories.value.forEach(cat => {
+        cat.items.forEach(item => {
+          if (item.badge || item.promotional_price || highlights.length < 8) {
+            if (!highlights.some(h => h.id === item.id)) {
+              highlights.push(item);
+            }
+          }
+        });
+      });
+      return highlights.slice(0, 10);
+    });
+
+    // Suggested Complementary Products ("Que tal levar junto?")
+    const suggestedItems = computed(() => {
+      const suggestions = [];
+      categories.value.forEach(cat => {
+        cat.items.forEach(item => {
+          if (item.id !== selectedItem.value?.id && suggestions.length < 6) {
+            suggestions.push(item);
+          }
+        });
+      });
+      return suggestions;
+    });
+
     // Filtered Categories based on search query
     const filteredCategories = computed(() => {
       const query = searchQuery.value.trim().toLowerCase();
@@ -131,12 +167,10 @@ createApp({
       itemObservation.value = '';
       selectedOptions.value = {};
 
-      // Pre-select options if minimum required
       if (item.add_ons && item.add_ons.length > 0) {
         item.add_ons.forEach(addon => {
           selectedOptions.value[addon.id] = [];
           if (addon.minimum_quantity > 0 && addon.subitems && addon.subitems.length > 0) {
-            // Select first subitem if single choice
             if (addon.choice_type === 'SINGLE') {
               selectedOptions.value[addon.id] = [addon.subitems[0].id];
             }
@@ -145,6 +179,20 @@ createApp({
       }
 
       showItemModal.value = true;
+    };
+
+    // Add suggested item directly to cart
+    const addQuickItemToCart = (item) => {
+      cart.value.push({
+        id: Date.now() + Math.random(),
+        item: item,
+        quantity: 1,
+        unitPrice: item.promotional_price ?? item.price ?? item.minimum_price ?? 0,
+        totalPrice: item.promotional_price ?? item.price ?? item.minimum_price ?? 0,
+        optionsText: '',
+        observation: ''
+      });
+      triggerToast(`${item.name} adicionado à sacola!`);
     };
 
     // Toggle add-on subitem selection
@@ -172,7 +220,7 @@ createApp({
       return list.includes(subitemId);
     };
 
-    // Calculate Modal Unit Price (base price + add-ons)
+    // Calculate Modal Unit Price
     const modalUnitPrice = computed(() => {
       if (!selectedItem.value) return 0;
       let price = selectedItem.value.promotional_price ?? selectedItem.value.price ?? selectedItem.value.minimum_price ?? 0;
@@ -200,7 +248,6 @@ createApp({
     const addToCart = () => {
       if (!selectedItem.value) return;
 
-      // Format options summary text
       const optionsTextList = [];
       if (selectedItem.value.add_ons) {
         selectedItem.value.add_ons.forEach(addon => {
@@ -233,7 +280,7 @@ createApp({
       triggerToast('Item adicionado à sua sacola!');
     };
 
-    // Toast notification
+    // Trigger Toast
     const triggerToast = (msg) => {
       toastMessage.value = msg;
       showToast.value = true;
@@ -273,11 +320,32 @@ createApp({
     // Scroll to category section
     const scrollToCategory = (catId) => {
       activeCatId.value = catId;
+      showCategoryDrawer.value = false;
+      window.location.hash = `cat-${catId}`;
+
       const el = document.getElementById(`cat-${catId}`);
       if (el) {
-        const yOffset = -70; // Header offset
+        const yOffset = -75;
         const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    };
+
+    // Bottom Bar Navigation Handlers
+    const setTab = (tab) => {
+      activeTab.value = tab;
+      if (tab === 'home') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (tab === 'search') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => {
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) searchInput.focus();
+        }, 100);
+      } else if (tab === 'cart') {
+        showCartModal.value = true;
+      } else if (tab === 'info') {
+        showInfoModal.value = true;
       }
     };
 
@@ -298,7 +366,6 @@ createApp({
         }
       }
 
-      // Build Message Text
       let msg = `🧀 *NOVO PEDIDO - QUEIJEIRA 504*\n`;
       msg += `-----------------------------------\n`;
       msg += `👤 *Cliente:* ${customer.value.name.trim()}\n`;
@@ -315,7 +382,7 @@ createApp({
       msg += `-----------------------------------\n`;
       msg += `🛒 *ITENS DO PEDIDO:*\n\n`;
 
-      cart.value.forEach((cItem, i) => {
+      cart.value.forEach((cItem) => {
         msg += `*${cItem.quantity}x ${cItem.item.name}* - ${formatMoney(cItem.unitPrice * cItem.quantity)}\n`;
         if (cItem.optionsText) {
           msg += `   └ _Opções:_ ${cItem.optionsText}\n`;
@@ -348,7 +415,6 @@ createApp({
       const encodedMsg = encodeURIComponent(msg);
       const waUrl = `https://wa.me/${targetPhone}?text=${encodedMsg}`;
 
-      // Clear cart on successful submit
       cart.value = [];
       showCheckoutModal.value = false;
       showCartModal.value = false;
@@ -360,8 +426,12 @@ createApp({
       profile,
       categories,
       filteredCategories,
+      highlightedItems,
+      suggestedItems,
+      activeTab,
       activeCatId,
       searchQuery,
+      showCategoryDrawer,
       showItemModal,
       showCartModal,
       showCheckoutModal,
@@ -378,6 +448,7 @@ createApp({
       formatMoney,
       isStoreOpen,
       openItemModal,
+      addQuickItemToCart,
       toggleSubitem,
       isSubitemSelected,
       modalUnitPrice,
@@ -389,6 +460,7 @@ createApp({
       deliveryFee,
       cartTotal,
       scrollToCategory,
+      setTab,
       sendWhatsAppOrder
     };
   }

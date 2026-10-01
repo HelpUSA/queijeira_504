@@ -40,7 +40,7 @@
 </head>
 <body>
 
-  <div id="app" class="pb-24">
+  <div id="app" class="pb-28">
     
     <!-- Top Header Cover Banner -->
     <div class="cover-banner w-full bg-slate-800 relative"
@@ -48,7 +48,7 @@
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
     </div>
 
-    <!-- Main Container -->
+    <!-- Main Store Header Card Container -->
     <div class="max-w-4xl mx-auto px-4 -mt-16 relative z-10">
       
       <!-- Store Info Card -->
@@ -90,7 +90,7 @@
               </div>
               <button @click="showInfoModal = true" class="text-brand font-semibold hover:underline flex items-center gap-1">
                 <i class="fa-solid fa-circle-info"></i>
-                <span>Ver Informações</span>
+                <span>Mais informações</span>
               </button>
             </div>
           </div>
@@ -102,8 +102,9 @@
       <div class="relative mb-6">
         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
         <input type="text" 
+               id="search-input"
                v-model="searchQuery" 
-               placeholder="Buscar queijo, vinho, geleia ou item..." 
+               placeholder="Busque por um produto (ex: Queijo Coalho, Vinho, Geleia)..." 
                class="w-full pl-11 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition-all text-sm text-slate-700">
         <button v-if="searchQuery" 
                 @click="searchQuery = ''" 
@@ -114,21 +115,66 @@
 
     </div> <!-- End Main Header Container -->
 
-    <!-- Sticky Category Tabs Navigation -->
-    <div class="sticky-cat-nav border-b border-slate-200 mb-6">
-      <div class="max-w-4xl mx-auto px-4 flex items-center overflow-x-auto no-scrollbar space-x-1 py-1">
-        <button v-for="cat in categories" 
-                :key="cat.id" 
-                @click="scrollToCategory(cat.id)"
-                :class="{ 'active': activeCatId === cat.id }"
-                class="cat-tab-item flex-shrink-0">
-          {{ cat.name }}
-          <span class="ml-1 text-xs opacity-75 font-normal">({{ cat.items ? cat.items.length : 0 }})</span>
-        </button>
+    <!-- Destaques Section (CardapioWeb Featured Carousel) -->
+    <div v-if="!searchQuery && highlightedItems.length > 0" class="max-w-4xl mx-auto px-4 mb-8">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-fire text-amber-500"></i>
+          <span>Destaques</span>
+        </h2>
+        <span class="text-xs text-slate-400 font-medium">Os mais pedidos</span>
+      </div>
+
+      <div class="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-4 px-4">
+        <div v-for="item in highlightedItems" 
+             :key="'dest- ' + item.id"
+             @click="openItemModal(item)"
+             class="flex-shrink-0 w-64 bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm hover:shadow-md cursor-pointer transition-all flex gap-3 items-center">
+          <img :src="item.local_image || item.image_url || 'assets/images/logo_1.png'" 
+               :alt="item.name" 
+               class="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-slate-50"
+               onerror="this.src='assets/images/logo_1.png'">
+          
+          <div class="flex-1 min-w-0">
+            <span v-if="item.badge" class="badge-tag badge-highlight text-[9px] mb-1">
+              {{ item.badge }}
+            </span>
+            <h4 class="font-semibold text-slate-800 text-xs line-clamp-1 mb-1">{{ item.name }}</h4>
+            <span class="font-bold text-slate-900 text-xs">
+              {{ formatMoney(item.promotional_price ?? item.price ?? item.minimum_price) }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Catalog Sections & Products -->
+    <!-- Sticky Category Navigation Bar (CardapioWeb Style with Drawer Button) -->
+    <div class="sticky-cat-nav border-b border-slate-200 mb-6">
+      <div class="max-w-4xl mx-auto px-4 flex items-center justify-between gap-2 py-1">
+        
+        <!-- Category Horizontal Tabs -->
+        <div class="flex items-center overflow-x-auto no-scrollbar space-x-1 flex-1">
+          <button v-for="cat in categories" 
+                  :key="cat.id" 
+                  @click="scrollToCategory(cat.id)"
+                  :class="{ 'active': activeCatId === cat.id }"
+                  class="cat-tab-item flex-shrink-0">
+            {{ cat.name }}
+            <span class="ml-1 text-xs opacity-70 font-normal">({{ cat.items ? cat.items.length : 0 }})</span>
+          </button>
+        </div>
+
+        <!-- "Categorias" List Drawer Button -->
+        <button @click="showCategoryDrawer = true" 
+                class="flex-shrink-0 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
+          <i class="fa-solid fa-list-ul text-brand"></i>
+          <span class="hidden sm:inline">Categorias</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Catalog Sections & Products List -->
     <div class="max-w-4xl mx-auto px-4 space-y-10">
       
       <div v-if="filteredCategories.length === 0" class="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
@@ -143,17 +189,19 @@
       <div v-for="cat in filteredCategories" 
            :key="cat.id" 
            :id="'cat-' + cat.id" 
-           class="scroll-mt-20">
+           class="scroll-mt-24">
         
         <!-- Category Header -->
-        <div class="mb-4">
-          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <span>{{ cat.name }}</span>
-            <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
-              {{ cat.items.length }}
-            </span>
-          </h2>
-          <p v-if="cat.description" class="text-xs text-slate-500 mt-1">{{ cat.description }}</p>
+        <div class="mb-4 pb-2 border-b border-slate-200/60 flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <span>{{ cat.name }}</span>
+              <span class="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-200/60">
+                {{ cat.items.length }}
+              </span>
+            </h2>
+            <p v-if="cat.description" class="text-xs text-slate-500 mt-1">{{ cat.description }}</p>
+          </div>
         </div>
 
         <!-- Product Grid -->
@@ -217,7 +265,7 @@
 
     </div> <!-- End Catalog Sections -->
 
-    <!-- Floating Cart Bar -->
+    <!-- Floating Cart Bar (Above Bottom Bar) -->
     <div v-if="cartCount > 0" 
          @click="showCartModal = true" 
          class="floating-cart-bar">
@@ -240,11 +288,82 @@
       </div>
     </div>
 
+    <!-- Fixed Bottom Navigation Bar (CardapioWeb 4-Tab Bar) -->
+    <nav class="bottom-nav-bar">
+      <button @click="setTab('home')" 
+              :class="{ 'active': activeTab === 'home' }" 
+              class="bottom-nav-item">
+        <i class="fa-solid fa-house"></i>
+        <span>Início</span>
+      </button>
+
+      <button @click="setTab('search')" 
+              :class="{ 'active': activeTab === 'search' }" 
+              class="bottom-nav-item">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Busca</span>
+      </button>
+
+      <button @click="setTab('cart')" 
+              :class="{ 'active': activeTab === 'cart' }" 
+              class="bottom-nav-item">
+        <div class="relative">
+          <i class="fa-solid fa-basket-shopping"></i>
+          <span v-if="cartCount > 0" class="absolute -top-1.5 -right-2.5 bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+            {{ cartCount }}
+          </span>
+        </div>
+        <span>Sacola</span>
+      </button>
+
+      <button @click="setTab('info')" 
+              :class="{ 'active': activeTab === 'info' }" 
+              class="bottom-nav-item">
+        <i class="fa-solid fa-circle-info"></i>
+        <span>Informações</span>
+      </button>
+    </nav>
+
+    <!-- Full Category List Drawer Modal -->
+    <div v-if="showCategoryDrawer" class="modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="modal-content w-full sm:max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-list-ul text-brand"></i>
+            <h3 class="font-bold text-slate-800 text-base">Todas as Categorias</h3>
+          </div>
+          <button @click="showCategoryDrawer = false" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <div class="p-3 overflow-y-auto divide-y divide-slate-100">
+          <div v-for="cat in categories" 
+               :key="'drawer-' + cat.id"
+               @click="scrollToCategory(cat.id)"
+               class="p-3.5 hover:bg-amber-50/50 rounded-xl cursor-pointer flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-amber-100/70 text-amber-800 flex items-center justify-center font-bold text-xs">
+                🧀
+              </div>
+              <span class="font-semibold text-slate-800 text-sm">{{ cat.name }}</span>
+            </div>
+
+            <span class="text-xs text-slate-500 font-medium px-2 py-0.5 bg-slate-100 rounded-full">
+              {{ cat.items.length }} itens
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div> <!-- End Category Drawer -->
+
     <!-- Product Detail Modal -->
     <div v-if="showItemModal && selectedItem" class="modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div class="modal-content w-full sm:max-w-xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
         
-        <!-- Header -->
+        <!-- Header Image -->
         <div class="relative bg-slate-900 flex-shrink-0">
           <img :src="selectedItem.local_image || selectedItem.image_url || 'assets/images/logo_1.png'" 
                :alt="selectedItem.name" 
@@ -318,6 +437,31 @@
                       placeholder="Ex: fatiar em pedaços finos, embalar para presente..." 
                       rows="2" 
                       class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"></textarea>
+          </div>
+
+          <!-- "Que tal levar junto?" Suggestions Section -->
+          <div v-if="suggestedItems.length > 0" class="pt-4 border-t border-slate-100">
+            <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-basket-shopping text-brand"></i>
+              <span>Que tal levar junto?</span>
+            </h4>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div v-for="sug in suggestedItems" 
+                   :key="'sug-' + sug.id"
+                   class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                <div>
+                  <h5 class="font-semibold text-slate-800 text-xs line-clamp-1">{{ sug.name }}</h5>
+                  <span class="text-xs font-bold text-slate-900 block mt-1">
+                    {{ formatMoney(sug.promotional_price ?? sug.price ?? sug.minimum_price) }}
+                  </span>
+                </div>
+                <button @click="addQuickItemToCart(sug)" 
+                        class="mt-2 py-1 px-2 bg-brand/10 text-brand hover:bg-brand hover:text-white rounded-lg text-[11px] font-bold transition-all w-full text-center">
+                  + Adicionar
+                </button>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -488,7 +632,7 @@
             </div>
           </div>
 
-          <!-- Delivery Address (if Delivery selected) -->
+          <!-- Delivery Address -->
           <div v-if="orderType === 'delivery'" class="pt-2 border-t border-slate-100">
             <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Endereço de Entrega</h4>
             
