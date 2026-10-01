@@ -80,6 +80,37 @@ body {
   background-color: #ffffff;
 }
 
+/* Category Card Tile (Clean Home Screen Layout) */
+.category-card-tile {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #eef2f6;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.category-card-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  border-color: rgba(236, 146, 14, 0.4);
+}
+
+.category-card-img {
+  height: 120px;
+  width: 100%;
+  object-fit: cover;
+  background-color: #f8fafc;
+}
+
+@media (min-width: 640px) {
+  .category-card-img {
+    height: 140px;
+  }
+}
+
 /* Sticky Navigation Bar */
 .sticky-cat-nav {
   position: sticky;

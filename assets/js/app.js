@@ -7,13 +7,13 @@ createApp({
     const profile = computed(() => storeData.value.profile || {});
     const categories = computed(() => storeData.value.categories || []);
 
-    // Navigation & Tab State
-    const activeTab = ref('home'); // 'home' | 'search' | 'cart' | 'info'
-    const activeCatId = ref(null);
+    // Screen Views State ('home' | 'category' | 'search')
+    const currentView = ref('home');
+    const selectedCategory = ref(null);
     const searchQuery = ref('');
-    const showCategoryDrawer = ref(false);
     
     // Modals Visibility
+    const showCategoryDrawer = ref(false);
     const showItemModal = ref(false);
     const showCartModal = ref(false);
     const showCheckoutModal = ref(false);
@@ -44,7 +44,27 @@ createApp({
       changeAmount: ''
     });
 
-    // Load saved cart and customer details
+    // Compute Category Cards with Cover Images for Home Grid
+    const categoryCards = computed(() => {
+      return categories.value.map(cat => {
+        let coverImg = null;
+        if (cat.items) {
+          for (const item of cat.items) {
+            if (item.local_image || item.image_url) {
+              coverImg = item.local_image || item.image_url;
+              break;
+            }
+          }
+        }
+        return {
+          ...cat,
+          coverImage: coverImg || 'assets/images/logo_1.png',
+          itemCount: cat.items ? cat.items.length : 0
+        };
+      }).filter(cat => cat.itemCount > 0); // Only categories with active items
+    });
+
+    // Load saved cart & customer state
     onMounted(() => {
       try {
         const savedCart = localStorage.getItem('q504_cart');
@@ -56,14 +76,13 @@ createApp({
         console.error('Error loading saved state:', e);
       }
 
-      if (categories.value.length > 0) {
-        activeCatId.value = categories.value[0].id;
-      }
-
-      // Check hash in URL
+      // Check hash in URL for category deep linking
       if (window.location.hash) {
         const catId = window.location.hash.replace('#cat-', '');
-        if (catId) activeCatId.value = catId;
+        const foundCat = categories.value.find(c => String(c.id) === String(catId));
+        if (foundCat) {
+          openCategoryView(foundCat);
+        }
       }
     });
 
@@ -81,6 +100,15 @@ createApp({
       } catch (e) {}
     }, { deep: true });
 
+    // Watch search query to toggle search view
+    watch(searchQuery, (q) => {
+      if (q.trim()) {
+        currentView.value = 'search';
+      } else if (currentView.value === 'search') {
+        currentView.value = selectedCategory.value ? 'category' : 'home';
+      }
+    });
+
     // Format currency (R$ 0,00)
     const formatMoney = (val) => {
       if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
@@ -90,7 +118,7 @@ createApp({
     // Store Open / Closed Check
     const isStoreOpen = computed(() => {
       const now = new Date();
-      const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+      const dayOfWeek = now.getDay();
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const curTimeMinutes = hours * 60 + minutes;
@@ -115,7 +143,7 @@ createApp({
       return false;
     });
 
-    // Highlighted / Featured Products ("Destaques")
+    // Highlighted Products ("Destaques")
     const highlightedItems = computed(() => {
       const highlights = [];
       categories.value.forEach(cat => {
@@ -130,7 +158,7 @@ createApp({
       return highlights.slice(0, 10);
     });
 
-    // Suggested Complementary Products ("Que tal levar junto?")
+    // Suggested Complementary Products
     const suggestedItems = computed(() => {
       const suggestions = [];
       categories.value.forEach(cat => {
@@ -143,24 +171,41 @@ createApp({
       return suggestions;
     });
 
-    // Filtered Categories based on search query
-    const filteredCategories = computed(() => {
+    // Search Results Across All Categories
+    const searchResults = computed(() => {
       const query = searchQuery.value.trim().toLowerCase();
-      if (!query) return categories.value;
+      if (!query) return [];
 
-      return categories.value.map(cat => {
-        const matchingItems = cat.items.filter(item => 
-          item.name.toLowerCase().includes(query) || 
-          (item.description && item.description.toLowerCase().includes(query))
-        );
-        return {
-          ...cat,
-          items: matchingItems
-        };
-      }).filter(cat => cat.items.length > 0);
+      const results = [];
+      categories.value.forEach(cat => {
+        cat.items.forEach(item => {
+          if (item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query))) {
+            results.push({ ...item, categoryName: cat.name });
+          }
+        });
+      });
+      return results;
     });
 
-    // Select product to open detail modal
+    // Open Category Sub-Window Screen
+    const openCategoryView = (cat) => {
+      selectedCategory.value = cat;
+      currentView.value = 'category';
+      showCategoryDrawer.value = false;
+      window.location.hash = `cat-${cat.id}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Return to Main Home Categories View
+    const goToHome = () => {
+      selectedCategory.value = null;
+      searchQuery.value = '';
+      currentView.value = 'home';
+      window.location.hash = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Open Product Detail Modal
     const openItemModal = (item) => {
       selectedItem.value = item;
       itemQuantity.value = 1;
@@ -181,7 +226,7 @@ createApp({
       showItemModal.value = true;
     };
 
-    // Add suggested item directly to cart
+    // Quick Add to Cart
     const addQuickItemToCart = (item) => {
       cart.value.push({
         id: Date.now() + Math.random(),
@@ -317,31 +362,12 @@ createApp({
       return cartSubtotal.value + deliveryFee.value;
     });
 
-    // Scroll to category section
-    const scrollToCategory = (catId) => {
-      activeCatId.value = catId;
-      showCategoryDrawer.value = false;
-      window.location.hash = `cat-${catId}`;
-
-      const el = document.getElementById(`cat-${catId}`);
-      if (el) {
-        const yOffset = -75;
-        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
-    };
-
     // Bottom Bar Navigation Handlers
-    const setTab = (tab) => {
-      activeTab.value = tab;
+    const setNavTab = (tab) => {
       if (tab === 'home') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (tab === 'search') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => {
-          const searchInput = document.getElementById('search-input');
-          if (searchInput) searchInput.focus();
-        }, 100);
+        goToHome();
+      } else if (tab === 'categories') {
+        showCategoryDrawer.value = true;
       } else if (tab === 'cart') {
         showCartModal.value = true;
       } else if (tab === 'info') {
@@ -425,11 +451,12 @@ createApp({
     return {
       profile,
       categories,
-      filteredCategories,
+      categoryCards,
       highlightedItems,
       suggestedItems,
-      activeTab,
-      activeCatId,
+      searchResults,
+      currentView,
+      selectedCategory,
       searchQuery,
       showCategoryDrawer,
       showItemModal,
@@ -447,6 +474,8 @@ createApp({
       customer,
       formatMoney,
       isStoreOpen,
+      openCategoryView,
+      goToHome,
       openItemModal,
       addQuickItemToCart,
       toggleSubitem,
@@ -459,8 +488,7 @@ createApp({
       cartSubtotal,
       deliveryFee,
       cartTotal,
-      scrollToCategory,
-      setTab,
+      setNavTab,
       sendWhatsAppOrder
     };
   }
